@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     LParen,
     RParen,
@@ -9,12 +9,10 @@ pub enum Token {
     Times,
     Divide,
     Integer(i64),
-    EOF,
 }
 
 pub struct Lexer<'a> {
     iter: Peekable<std::str::Chars<'a>>,
-    hit_eof: bool,
 }
 
 pub fn lex(input: &String) -> Vec<Token> {
@@ -25,7 +23,6 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a String) -> Lexer<'a> {
         Lexer {
             iter: input.chars().peekable(),
-            hit_eof: false,
         }
     }
 
@@ -72,9 +69,6 @@ impl<'a> Iterator for Lexer<'a> {
                 }
                 _ => None,
             }
-        } else if !self.hit_eof {
-            self.hit_eof = true;
-            Some(Token::EOF)
         } else {
             None
         }
@@ -88,7 +82,7 @@ mod tests {
     #[test]
     fn lex_empty_parens() {
         let tokens = lex(&"()".to_owned());
-        assert_eq!(tokens, vec![Token::LParen, Token::RParen, Token::EOF]);
+        assert_eq!(tokens, vec![Token::LParen, Token::RParen]);
     }
 
     #[test]
@@ -96,20 +90,14 @@ mod tests {
         let tokens = lex(&"*/+-".to_owned());
         assert_eq!(
             tokens,
-            vec![
-                Token::Times,
-                Token::Divide,
-                Token::Plus,
-                Token::Minus,
-                Token::EOF
-            ]
+            vec![Token::Times, Token::Divide, Token::Plus, Token::Minus]
         );
     }
 
     #[test]
     fn lex_integer() {
         let tokens: Vec<Token> = lex(&"100".to_owned());
-        assert_eq!(tokens, vec![Token::Integer(100), Token::EOF]);
+        assert_eq!(tokens, vec![Token::Integer(100)]);
     }
 
     #[test]
@@ -127,8 +115,7 @@ mod tests {
                 Token::LParen,
                 Token::Minus,
                 Token::Integer(4),
-                Token::RParen,
-                Token::EOF
+                Token::RParen
             ]
         );
     }
