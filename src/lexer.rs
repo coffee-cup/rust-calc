@@ -1,4 +1,3 @@
-// use regex::Regex;
 use std::iter::Peekable;
 
 #[derive(Debug, PartialEq)]
@@ -10,10 +9,12 @@ pub enum Token {
     Times,
     Divide,
     Integer(i64),
+    EOF,
 }
 
 pub struct Lexer<'a> {
     iter: Peekable<std::str::Chars<'a>>,
+    hit_eof: bool,
 }
 
 pub fn lex(input: &String) -> Vec<Token> {
@@ -24,10 +25,11 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a String) -> Lexer<'a> {
         Lexer {
             iter: input.chars().peekable(),
+            hit_eof: false,
         }
     }
 
-    fn advance_token(&mut self, t: Token) -> Option<Token> {
+    fn advance(&mut self, t: Token) -> Option<Token> {
         self.iter.next();
         Some(t)
     }
@@ -44,12 +46,12 @@ impl<'a> Iterator for Lexer<'a> {
 
         if let Some(c) = self.iter.peek() {
             match c {
-                '(' => self.advance_token(Token::LParen),
-                ')' => self.advance_token(Token::RParen),
-                '*' => self.advance_token(Token::Times),
-                '/' => self.advance_token(Token::Divide),
-                '+' => self.advance_token(Token::Plus),
-                '-' => self.advance_token(Token::Minus),
+                '(' => self.advance(Token::LParen),
+                ')' => self.advance(Token::RParen),
+                '*' => self.advance(Token::Times),
+                '/' => self.advance(Token::Divide),
+                '+' => self.advance(Token::Plus),
+                '-' => self.advance(Token::Minus),
                 '0'...'9' => {
                     let mut number = self
                         .iter
@@ -70,6 +72,9 @@ impl<'a> Iterator for Lexer<'a> {
                 }
                 _ => None,
             }
+        } else if !self.hit_eof {
+            self.hit_eof = true;
+            Some(Token::EOF)
         } else {
             None
         }
@@ -83,7 +88,7 @@ mod tests {
     #[test]
     fn lex_empty_parens() {
         let tokens = lex(&"()".to_owned());
-        assert_eq!(tokens, vec![Token::LParen, Token::RParen]);
+        assert_eq!(tokens, vec![Token::LParen, Token::RParen, Token::EOF]);
     }
 
     #[test]
@@ -91,14 +96,20 @@ mod tests {
         let tokens = lex(&"*/+-".to_owned());
         assert_eq!(
             tokens,
-            vec![Token::Times, Token::Divide, Token::Plus, Token::Minus]
+            vec![
+                Token::Times,
+                Token::Divide,
+                Token::Plus,
+                Token::Minus,
+                Token::EOF
+            ]
         );
     }
 
     #[test]
     fn lex_integer() {
         let tokens: Vec<Token> = lex(&"100".to_owned());
-        assert_eq!(tokens, vec![Token::Integer(100)]);
+        assert_eq!(tokens, vec![Token::Integer(100), Token::EOF]);
     }
 
     #[test]
@@ -116,7 +127,8 @@ mod tests {
                 Token::LParen,
                 Token::Minus,
                 Token::Integer(4),
-                Token::RParen
+                Token::RParen,
+                Token::EOF
             ]
         );
     }
