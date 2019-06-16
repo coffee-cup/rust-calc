@@ -8,15 +8,50 @@ use crate::lexer::*;
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
-    Unary(Box<Expr>),
-    Binary(Box<Expr>, Token, Box<Expr>),
+    Unary(UnaryOp, Box<Expr>),
+    Binary(Box<Expr>, BinaryOp, Box<Expr>),
     Literal(i64),
 }
 
-pub fn parse(input: &String) -> Result<Expr, String> {
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum UnaryOp {
+    Neg,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum BinaryOp {
+    Pow,
+    Mul,
+    Div,
+    Add,
+    Sub,
+}
+
+fn token_to_binop(token: Token) -> Result<BinaryOp, String> {
+    match token {
+        Token::Pow => Ok(BinaryOp::Pow),
+        Token::Times => Ok(BinaryOp::Mul),
+        Token::Divide => Ok(BinaryOp::Div),
+        Token::Plus => Ok(BinaryOp::Add),
+        Token::Minus => Ok(BinaryOp::Sub),
+        _ => Err("no binop for token".to_owned()),
+    }
+}
+
+pub fn parse_and_lex(input: &String) -> Result<Expr, String> {
     let tokens = lex(&input);
+    parse(&tokens)
+}
+
+pub fn parse(tokens: &Vec<Token>) -> Result<Expr, String> {
     let mut parser = Parser::new(tokens.iter());
-    parser.parse_expr()
+    let ast = parser.parse_expr();
+
+    if let None = parser.input.peek() {
+        ast
+    } else {
+        Err("input has not fully been consumed".to_owned())
+    }
 }
 
 type Tokens<'a> = Peekable<Iter<'a, Token>>;
@@ -33,7 +68,7 @@ impl Token {
             Token::Integer(n) => Ok(Expr::Literal(n)),
             Token::Minus => {
                 let e = parser.expression(100)?;
-                Ok(Expr::Unary(Box::new(e)))
+                Ok(Expr::Unary(UnaryOp::Neg, Box::new(e)))
             }
             Token::LParen => {
                 let e = parser.expression(0)?;
@@ -53,11 +88,12 @@ impl Token {
         match *self {
             Token::Times | Token::Divide | Token::Plus | Token::Minus => {
                 let rhs = parser.expression(self.lbp())?;
-                Ok(Expr::Binary(Box::new(lhs), self.clone(), Box::new(rhs)))
+                let op = token_to_binop(self.clone()).unwrap();
+                Ok(Expr::Binary(Box::new(lhs), op, Box::new(rhs)))
             }
             Token::Pow => {
                 let rhs = parser.expression(self.lbp() - 1)?;
-                Ok(Expr::Binary(Box::new(lhs), self.clone(), Box::new(rhs)))
+                Ok(Expr::Binary(Box::new(lhs), BinaryOp::Pow, Box::new(rhs)))
             }
             _ => Err("expecting operator".to_owned()),
         }
@@ -118,7 +154,43 @@ mod tests {
 
     #[test]
     fn parse_literal_expr() {
-        let ast = parse(&"2".to_owned());
+        let ast = parse_and_lex(&"2".to_owned());
         assert_eq!(ast, Ok(Expr::Literal(2)))
+    }
+
+    #[test]
+    fn parse_addition_expr() {
+        let ast = parse_and_lex(&"2 + 1".to_owned());
+        assert_eq!(
+            ast,
+            Ok(Expr::Binary(
+                Box::new(Expr::Literal(2)),
+                BinaryOp::Add,
+                Box::new(Expr::Literal(1))
+            ))
+        )
+    }
+
+    #[test]
+    fn parse_paren() {
+        let ast = parse_and_lex(&"(1)".to_owned());
+        assert_eq!(ast, Ok(Expr::Literal(1)))
+    }
+
+    #[test]
+    fn basic_precedence() {
+        let ast = parse_and_lex(&"1 + 2 * 3".to_owned());
+        assert_eq!(
+            ast,
+            Ok(Expr::Binary(
+                Box::new(Expr::Literal(1)),
+                BinaryOp::Add,
+                Box::new(Expr::Binary(
+                    Box::new(Expr::Literal(2)),
+                    BinaryOp::Mul,
+                    Box::new(Expr::Literal(3))
+                ))
+            ))
+        )
     }
 }

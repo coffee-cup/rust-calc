@@ -1,6 +1,7 @@
 use std::io;
 use std::io::Write;
 
+mod interpreter;
 mod lexer;
 mod parser;
 
@@ -12,11 +13,20 @@ fn main() {
         match read_line().trim() {
             "" => (),
             line => {
-                let tokens = lexer::lex(&line.to_owned());
-                println!("{:?}", tokens);
+                let result = (|| {
+                    let tokens = lexer::lex(&line.to_owned());
+                    // println!("{:?}", tokens);
 
-                let ast = parser::parse(&line.to_owned());
-                println!("{:?}", ast);
+                    let ast = parser::parse(&tokens)?;
+                    // println!("{:?}", ast);
+
+                    interpreter::interpret(&ast)
+                })();
+
+                match result {
+                    Ok(n) => println!("{}", n),
+                    Err(err) => println!("{}", err),
+                };
             }
         }
     }
