@@ -46,23 +46,8 @@ mod tests {
 
     #[test]
     fn eval_simple() {
-        let result = interpret(&Expr::Binary(
-            Box::new(Expr::Binary(
-                Box::new(Expr::Literal(3)),
-                BinaryOp::Mul,
-                Box::new(Expr::Binary(
-                    Box::new(Expr::Binary(
-                        Box::new(Expr::Literal(2)),
-                        BinaryOp::Add,
-                        Box::new(Expr::Unary(UnaryOp::Neg, Box::new(Expr::Literal(4)))),
-                    )),
-                    BinaryOp::Pow,
-                    Box::new(Expr::Literal(4)),
-                )),
-            )),
-            BinaryOp::Div,
-            Box::new(Expr::Literal(2)),
-        ));
+        let ast = parse_and_lex(&"3 * (2 + -4) ^ 4 / 2".to_owned()).unwrap();
+        let result = interpret(&ast);
         assert_eq!(result, Ok(24))
     }
 }
