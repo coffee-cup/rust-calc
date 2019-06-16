@@ -8,6 +8,7 @@ pub enum Token {
     Minus,
     Times,
     Divide,
+    Pow,
     Integer(i64),
 }
 
@@ -49,6 +50,7 @@ impl<'a> Iterator for Lexer<'a> {
                 '/' => self.advance(Token::Divide),
                 '+' => self.advance(Token::Plus),
                 '-' => self.advance(Token::Minus),
+                '^' => self.advance(Token::Pow),
                 '0'...'9' => {
                     let mut number = self
                         .iter

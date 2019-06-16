@@ -8,7 +8,7 @@ use crate::lexer::*;
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
-    Minus(Box<Expr>),
+    Unary(Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
     Literal(i64),
 }
@@ -28,9 +28,21 @@ struct Parser<'a> {
 impl Token {
     // null denotation
     // does not care about the token on the left
-    fn nud(&self) -> Result<Expr, String> {
+    fn nud(&self, parser: &mut Parser) -> Result<Expr, String> {
         match *self {
             Token::Integer(n) => Ok(Expr::Literal(n)),
+            Token::Minus => {
+                let e = parser.expression(100)?;
+                Ok(Expr::Unary(Box::new(e)))
+            }
+            Token::LParen => {
+                let e = parser.expression(0)?;
+                if let Some(Token::RParen) = parser.input.next() {
+                    Ok(e)
+                } else {
+                    Err("unbalanced parens".to_owned())
+                }
+            }
             _ => Err("expecting literal".to_owned()),
         }
     }
@@ -43,7 +55,10 @@ impl Token {
                 let rhs = parser.expression(self.lbp())?;
                 Ok(Expr::Binary(Box::new(lhs), self.clone(), Box::new(rhs)))
             }
-
+            Token::Pow => {
+                let rhs = parser.expression(self.lbp() - 1)?;
+                Ok(Expr::Binary(Box::new(lhs), self.clone(), Box::new(rhs)))
+            }
             _ => Err("expecting operator".to_owned()),
         }
     }
@@ -52,6 +67,7 @@ impl Token {
     // precedence of each operator
     fn lbp(&self) -> u32 {
         match self {
+            Token::Pow => 30,
             Token::Times | Token::Divide => 20,
             Token::Plus | Token::Minus => 10,
             _ => 0,
@@ -86,7 +102,7 @@ impl<'a> Parser<'a> {
     fn parse_nud(&mut self) -> Result<Expr, String> {
         self.input
             .next()
-            .map_or(Err("incomplete".to_owned()), |t| t.nud())
+            .map_or(Err("incomplete".to_owned()), |t| t.nud(self))
     }
 
     fn parse_led(&mut self, expr: Expr) -> Result<Expr, String> {

@@ -12,8 +12,11 @@ fn main() {
         match read_line().trim() {
             "" => (),
             line => {
+                let tokens = lexer::lex(&line.to_owned());
+                println!("{:?}", tokens);
+
                 let ast = parser::parse(&line.to_owned());
-                println!("{:?}", ast)
+                println!("{:?}", ast);
             }
         }
     }
