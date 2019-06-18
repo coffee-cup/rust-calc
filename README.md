@@ -17,7 +17,7 @@ $ cargo run
 ## Implementation
 
 The calculator is implemented as a lexer, parser, and interpreter. The parser is
-LR(1) and uses [Pratt's algorithm](https://en.wikipedia.org/wiki/Pratt_parser)
-for parsing operator precedence. I found [these
+uses [Pratt's algorithm](https://en.wikipedia.org/wiki/Pratt_parser) for parsing
+operator precedence. I found [these
 resources](https://pinboard.in/u:jakerunzer/t:pratt/) really useful when
 learning about and implementing this type of parser.
